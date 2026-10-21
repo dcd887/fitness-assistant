@@ -220,7 +220,7 @@ function buildPool(opts) {
     }
     pool.push({ slug: e.slug, zh: e.zh, en: e.en, equipment: e.equipment, type: e.type,
                 primary: e.primary, secondary: e.secondary, is_stretch: e.is_stretch,
-                cue: e.cue, cue_verified: e.cue_verified, _hit: hit, _note: note });
+                cue: e.cue, cue_verified: e.cue_verified, frames: e.frames || [], _hit: hit, _note: note });
   }
   return pool;
 }
