@@ -315,7 +315,7 @@ function buildDay(dayDef, pool, opts, used, maxEx) {
       var ss = setsFor(opts.goal, e);
       items.push({ slug: e.slug, zh: e.zh || e.en, en: e.en, primary: e.primary,
                    equipment: e.equipment, sets: ss.sets, reps: ss.reps, note: ss.note,
-                   cue: e.cue || "", verified: e.cue_verified !== false, isolation: isIsolation(e),
+                   cue: e.cue || "", verified: e.cue_verified !== false, isolation: isIsolation(e), frames: e.frames || [],
                    caution: !!e._hit, involve: !!e._note && !e._hit });
     }
   }
@@ -334,7 +334,7 @@ function addCardio(planDays, pool, maxEx) {
   last.items.push({ slug: cardio.slug, zh: cardio.zh || cardio.en, en: cardio.en,
                     primary: cardio.primary, equipment: cardio.equipment,
                     sets: 1, reps: "按时间", note: "有氧收尾", cue: cardio.cue || "",
-                    verified: cardio.cue_verified !== false, isolation: false });
+                    verified: cardio.cue_verified !== false, isolation: false, frames: cardio.frames || [] });
 }
 
 function buildPlan(opts) {
