@@ -67,6 +67,27 @@
     .week{break-inside:avoid;border-color:#999}
     .wrap{padding:0}
   }
+
+  /* 按肌群找动作 */
+  #msearch { margin-top: 26px; border-top: 1px solid #e2ddd2; padding-top: 18px; }
+  #msearch h2 { font-size: 15px; margin: 0 0 4px; }
+  #msearch .hint { color: #8b8478; font-size: 12px; margin-bottom: 10px; }
+  #mq { width: 100%; padding: 9px 11px; font-size: 14px; border: 1px solid #ddd6c8;
+        border-radius: 8px; background: #fdfcf9; color: #2b2824; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .chip { font-size: 12px; padding: 4px 10px; border: 1px solid #ddd6c8; border-radius: 999px;
+          background: #fdfcf9; color: #4a463f; cursor: pointer; }
+  .chip.on { background: #a63a2a; border-color: #a63a2a; color: #fff; }
+  .chip .n { opacity: .6; margin-left: 4px; }
+  .monly { font-size: 12px; color: #6b665c; display: inline-flex; align-items: center; gap: 5px; margin-bottom: 12px; }
+  .exlist { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 700px) { .exlist { grid-template-columns: 1fr 1fr; } }
+  .exrow { border: 1px solid #e6e0d4; border-radius: 10px; padding: 10px 12px; background: #fff; }
+  .exrow .nm2 { font-weight: 700; font-size: 14px; }
+  .exrow .nm2 small { font-weight: 400; color: #8b8478; margin-left: 6px; font-size: 12px; }
+  .exrow .tag2 { font-size: 12px; color: #6b665c; margin: 3px 0 6px; }
+  .exrow .empty2 { font-size: 12px; color: #9a938a; }
+
 </style>
 </head>
 <body>
@@ -144,6 +165,16 @@
   </div>
 
   <div id="out"></div>
+
+  <section id="msearch">
+    <h2>按肌群找动作</h2>
+    <div class="hint">输入动作名或肌群（例：菱形、后束、Y 字、calf），或点下面的肌群标签筛选。数据来自同一套 302 条动作库。</div>
+    <input id="mq" type="text" placeholder="搜索：动作名 / 肌群 / 器械">
+    <div class="chips" id="mchips"></div>
+    <label class="monly"><input type="checkbox" id="monly"> 只看主练（primary）</label>
+    <div class="exlist" id="mres"></div>
+  </section>
+
 
   <footer>
     容量与负荷依据：ACSM 2026 立场声明（Currier BS 等，<i>Med Sci Sports Exerc</i> 2026;58(4):851-872）。
@@ -633,6 +664,104 @@ $("#share").addEventListener("click", function () {
     navigator.clipboard.writeText(url).then(done, function () { prompt("复制这个链接：", url); });
   } else { prompt("复制这个链接：", url); }
 });
+
+
+/* ---------------- 按肌群找动作 ---------------- */
+var MUS_ZH = {
+  Core:"核心", Shoulders:"肩", Glutes:"臀", Hamstrings:"腘绳", Quads:"股四头",
+  Triceps:"肱三头", Chest:"胸", Biceps:"肱二头", "Upper Back":"上背（菱形/中下斜方）",
+  Cardio:"有氧", Back:"背", Forearms:"前臂", Legs:"腿", Calves:"小腿", Lats:"背阔",
+  "Rear Delts":"后束", Mobility:"活动度", "Lower Back":"下背", Hips:"髋", Grip:"握力",
+  Adductors:"内收肌", "Posterior Chain":"后链", Groin:"腹股沟"
+};
+var mqEl = document.getElementById("mq");
+var mresEl = document.getElementById("mres");
+var mchipsEl = document.getElementById("mchips");
+var monlyEl = document.getElementById("monly");
+var mSel = {};
+
+function muscleChips() {
+  var cnt = {};
+  for (var i = 0; i < DATA_EX.length; i++) {
+    var e = DATA_EX[i];
+    if (e.primary) cnt[e.primary] = (cnt[e.primary] || 0) + 1;
+    var sec = e.secondary || [];
+    for (var j = 0; j < sec.length; j++) if (sec[j]) cnt[sec[j]] = (cnt[sec[j]] || 0) + 1;
+  }
+  var keys = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a]; });
+  var h = "";
+  for (var k = 0; k < keys.length; k++) {
+    var m = keys[k];
+    h += '<span class="chip" data-m="' + esc(m) + '">' + esc(MUS_ZH[m] || m) +
+         '<span class="n">' + cnt[m] + '</span></span>';
+  }
+  mchipsEl.innerHTML = h;
+}
+
+function muscleMatch(e) {
+  var keys = Object.keys(mSel);
+  if (!keys.length) return true;
+  for (var i = 0; i < keys.length; i++) {
+    var m = keys[i];
+    if (monlyEl.checked) {
+      if (e.primary === m) return true;
+    } else {
+      if (e.primary === m) return true;
+      if ((e.secondary || []).indexOf(m) !== -1) return true;
+    }
+  }
+  return false;
+}
+
+function renderMuscleSearch() {
+  var q = (mqEl.value || "").trim().toLowerCase();
+  var out = [];
+  for (var i = 0; i < DATA_EX.length; i++) {
+    var e = DATA_EX[i];
+    if (e.is_stretch && !q) continue;
+    if (!muscleMatch(e)) continue;
+    if (q) {
+      var hay = (e.zh + " " + e.en + " " + e.primary + " " + (e.secondary || []).join(" ") +
+                 " " + (MUS_ZH[e.primary] || "") + " " + e.equipment).toLowerCase();
+      var keys = Object.keys(mSel);
+      for (var k = 0; k < keys.length; k++) hay += " " + (MUS_ZH[keys[k]] || "");
+      if (hay.indexOf(q) === -1) continue;
+    }
+    out.push(e);
+    if (out.length >= 80) break;
+  }
+
+  if (!out.length) {
+    mresEl.innerHTML = '<div class="empty2">没有匹配的动作。试试只输肌群中文（如「后束」）或清空筛选。</div>';
+    return;
+  }
+  var h = "";
+  for (var n = 0; n < out.length; n++) {
+    var it = out[n];
+    var sec = (it.secondary || []).map(function (m) { return MUS_ZH[m] || m; }).join(" / ");
+    h += '<div class="exrow"><div class="nm2">' + esc(it.zh) +
+         '<small>' + esc(it.en) + '</small></div>' +
+         '<div class="tag2">主：' + esc(MUS_ZH[it.primary] || it.primary) +
+         (sec ? '　协同：' + esc(sec) : '') + '　·　' + esc(it.equipment) + '</div>' +
+         (it.cue ? '<div class="empty2" style="margin-bottom:6px">' + esc(it.cue).slice(0, 90) + '…</div>' : '') +
+         figRow(it) + '</div>';
+  }
+  mresEl.innerHTML = h;
+}
+
+mchipsEl.addEventListener("click", function (ev) {
+  var chip = ev.target.closest(".chip");
+  if (!chip) return;
+  var m = chip.getAttribute("data-m");
+  if (mSel[m]) { delete mSel[m]; chip.classList.remove("on"); }
+  else { mSel[m] = 1; chip.classList.add("on"); }
+  renderMuscleSearch();
+});
+mqEl.addEventListener("input", renderMuscleSearch);
+monlyEl.addEventListener("change", renderMuscleSearch);
+
+muscleChips();
+renderMuscleSearch();
 
 (function init() {
   if (location.hash.length > 1) state = decodeState(location.hash);
