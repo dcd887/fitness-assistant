@@ -1,0 +1,5 @@
+# 运行素材不进仓库（302 个动作目录 / 900+ SVG 帧，约 25MB 且持续生成中）
+# 通过 GitHub Release 的 assets 压缩包分发，本地解压到 assets/ 即可获得完整动画
+assets/
+# 素材生成管线的失败清单（仅本地记录用）
+_asset_fail.txt
